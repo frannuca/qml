@@ -1,58 +1,59 @@
 ﻿using Accord.Genetic;
-using Accord.Math.Random;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.InteropServices.Marshalling;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace qmlib.optimizers
+namespace QMLib.optimizers
 {
-    abstract public class IGenetic
+    public abstract class NormalizedGeneticAlgorithm(int populationSize, int chromosomeLength)
     {
-        public IGenetic(int population_size, int chromosome_length, Func<double[],double> f_fitness)
-        {
-            PopulationSize = population_size;     
-            Fitness = new FitnessFunction(f_fitness);
-            ChromosomeLength = chromosome_length;
-        }
+        double mutationProbability = 0.1;
+        double crossoverProbability = 0.9;
+// Create a mutation operator
+        public int PopulationSize { get; } = populationSize;
+        public int ChromosomeLength { get; } = chromosomeLength;
+        protected abstract FitnessFunction Fitness { get; }
 
-        public int PopulationSize { get; }
-        public int ChromosomeLength { get; }
-        public FitnessFunction Fitness { get; }
-
-        public double[] Fit(int max_epochs)
+        public double[] Fit(int maxEpochs, double fitnessTolerance, int maxIterNoChange)
         {
+            
+            // Create a mutation operator
+            
             ISelectionMethod selection = new EliteSelection();
-            var rndsource = new Accord.Statistics.Distributions.Univariate.UniformContinuousDistribution(0,1);
-            var chromo = new DoubleArrayChromosome(rndsource, rndsource, rndsource, ChromosomeLength);
-            var pop = new Population(PopulationSize, chromo, Fitness, selection);
-            return [0,0];
-        }
-
-        abstract protected double[] Scale(double[] x);
-    }
-
-    public class FitnessFunction : IFitnessFunction
-    {
-        public FitnessFunction(Func<double[], double> f_fitness) 
-        {
-            Fitness = f_fitness;
-        }
-
-        public Func<double[], double> Fitness { get; }
-
-        public double Evaluate(IChromosome chromosome)
-        {
-            var dchromosome = chromosome as DoubleArrayChromosome;
-            if(dchromosome == null)
+            var rndSource = new Accord.Statistics.Distributions.Univariate.UniformContinuousDistribution(0,1);
+            var chromo = new BoundedDoubleArrayChromosome(ChromosomeLength, lowerBound:0, 1 );
+            var pop = new BoundedPopulation(PopulationSize, chromo, Fitness, selection, 0, 1);
+            pop.MutationRate = mutationProbability;
+            pop.CrossoverRate= crossoverProbability;
+            pop.RandomSelectionPortion = 0.1;
+            double lastFitness = 0;
+            int nIterNoChange = maxIterNoChange;
+            for (int i = 0; i < maxEpochs; i++)
             {
-                throw new ArgumentException("Only double array chromosomes are expected");
+                pop.RunEpoch();
+                var xx =(pop.BestChromosome as DoubleArrayChromosome)?.Value?? throw new ArgumentException("Only double array chromosomes are expected 1");
+                //Console.WriteLine($"{String.Join(',',xx)} {pop.BestChromosome.Fitness}");
+                var newfitness = pop.BestChromosome.Fitness;
+                if(lastFitness < newfitness && Math.Abs(lastFitness - newfitness) > fitnessTolerance)
+                {
+                    lastFitness = newfitness;
+                    nIterNoChange = maxIterNoChange;
+                }
+                else if (lastFitness < newfitness)
+                {
+                    lastFitness = newfitness;
+                    nIterNoChange--;
+                }
+                else
+                {
+                    nIterNoChange--;
+                }
+                if(nIterNoChange == 0)
+                {
+                    break;
+                }
             }
-
-            return Fitness(dchromosome.Value);
-
+            return (pop.BestChromosome as DoubleArrayChromosome)?.Value?? Array.Empty<double>();
         }
+
+        public abstract double[] Scale(double[] x);
     }
+
+  
 }

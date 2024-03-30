@@ -6,21 +6,23 @@ using System.Text;
 using System.Threading.Tasks;
 using Accord.Genetic;
 
-namespace qmlib.optimizers
+namespace QMLib.optimizers
 {
-    public class GAOpt : IGenetic
+    public class GaOpt(
+        int populationSize,
+        (double lowlimit, double highlimit)[] variableLimits,
+        Func<double[], double> fFitness)
+        : NormalizedGeneticAlgorithm(populationSize, variableLimits.Length)
     {
+        protected override FitnessFunction Fitness => new FitnessFunction(x =>  fFitness(Scale(x)));
 
-        public GAOpt(int population_size, IEnumerable<(double lowlimit, double highlimit)> variable_limits ,Func<double[], double> f_fitness): base(population_size, variable_limits.Count(), f_fitness) 
-        { 
-            limits = variable_limits.ToArray();
-        }
-
-        private readonly (double lowlimit, double highlimit)[] limits;
-
-        protected override double[] Scale(double[] x)
+        public override double[] Scale(double[] x)
         {
-            return x.Select((a, n) => limits[n].lowlimit + (limits[n].highlimit - limits[n].lowlimit)*a).ToArray();
+            if(x.Any(s => s>1 || s<0))
+            {
+                x = x.Select(a => Math.Min(1,Math.Max(0, a))).ToArray();
+            }
+            return x.Select((a, n) => variableLimits[n].lowlimit + (variableLimits[n].highlimit - variableLimits[n].lowlimit)*a).ToArray();
         }
     }
 }
