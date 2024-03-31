@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "tests", "tests\tests.csproj
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "qmlib", "qmlib\qmlib.csproj", "{F2B944DD-3932-4AF2-9B39-3FDA04FCF1BF}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestQMLib", "TestQMLib\TestQMLib.csproj", "{D05FD191-5289-4AE7-B379-68522C0074C1}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{F2B944DD-3932-4AF2-9B39-3FDA04FCF1BF}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F2B944DD-3932-4AF2-9B39-3FDA04FCF1BF}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F2B944DD-3932-4AF2-9B39-3FDA04FCF1BF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D05FD191-5289-4AE7-B379-68522C0074C1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D05FD191-5289-4AE7-B379-68522C0074C1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D05FD191-5289-4AE7-B379-68522C0074C1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D05FD191-5289-4AE7-B379-68522C0074C1}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

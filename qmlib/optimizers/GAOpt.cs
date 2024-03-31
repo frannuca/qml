@@ -8,11 +8,12 @@ using Accord.Genetic;
 
 namespace QMLib.optimizers
 {
+    
     public class GaOpt(
-        int populationSize,
+        GaParams pGaParams,
         (double lowlimit, double highlimit)[] variableLimits,
         Func<double[], double> fFitness)
-        : NormalizedGeneticAlgorithm(populationSize, variableLimits.Length)
+        : NormalizedGeneticAlgorithm(pGaParams, variableLimits.Length)
     {
         protected override FitnessFunction Fitness => new FitnessFunction(x =>  fFitness(Scale(x)));
 
