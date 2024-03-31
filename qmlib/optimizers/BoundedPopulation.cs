@@ -1,62 +1,61 @@
 using Accord.Genetic;
+using Accord.Math.Random;
 
 namespace QMLib.optimizers;
 
 using Accord.Genetic;
 
-public class BoundedPopulation : Population
+public class BoundedPopulation: Population
 {
-    private readonly double lowerBound;
-    private readonly double upperBound;
-
-    
-    public BoundedPopulation(int size, BoundedDoubleArrayChromosome ancestor, IFitnessFunction fitnessFunction, ISelectionMethod selectionMethod, double lowerBound, double upperBound)
+    public BoundedPopulation(
+        int size,
+        BoundedDoubleArrayChromosome ancestor,
+        IFitnessFunction fitnessFunction,
+        ISelectionMethod selectionMethod,
+        double crossoverRate,
+        double mutationRate,
+        double randomSelectionPortion,
+        IRandomNumberGenerator<double> uniformGenerator)
         : base(size, ancestor, fitnessFunction, selectionMethod)
     {
-        this.lowerBound = lowerBound;
-        this.upperBound = upperBound;
+        this.CrossoverRate = crossoverRate;
+        this.MutationRate = mutationRate;
+        this.RandomSelectionPortion = randomSelectionPortion;
+        this._uniformGenerator=uniformGenerator;
     }
 
-  
-    private void SetBounds()
-    {
-        // Check the boundaries of each chromosome
-        for (int index = 0; index < this.Size; ++index)
-        {
-            DoubleArrayChromosome boundedChromosome =  this[index] as DoubleArrayChromosome
-                                                              ??throw new ArgumentException("Only double array chromosomes are expected XXX");
-
-            for (int i = 0; i < boundedChromosome.Length; i++)
-            {
-                // If a gene is outside the boundaries, adjust it to the nearest boundary
-                if (boundedChromosome.Value[i] < lowerBound)
-                {
-                    boundedChromosome.Value[i] = lowerBound;
-                }
-                else if (boundedChromosome.Value[i] > upperBound)
-                {
-                    boundedChromosome.Value[i] = upperBound;
-                }
-            }
-        }
-    }
+    private readonly IRandomNumberGenerator<double> _uniformGenerator;
     public override void Crossover()
     {
-        base.Crossover();
-        SetBounds();
-
-    }
-    public override void Selection()
-    {
-        base.Selection();
-        SetBounds();
+        for (int index = 1; index < this.Size; index += 2)
+        {
+            if (_uniformGenerator.Generate() <= CrossoverRate)
+            {
+                IChromosome chromosome = this[index - 1].Clone();
+                IChromosome pair = this[index].Clone();
+                chromosome.Crossover(pair);
+                (chromosome as BoundedDoubleArrayChromosome)?.SetBounds();
+                (pair as BoundedDoubleArrayChromosome)?.SetBounds();
+                chromosome.Evaluate(FitnessFunction);
+                pair.Evaluate(FitnessFunction);
+                AddChromosome(chromosome);
+                AddChromosome(pair);
+            }
+        }
     }
     public override void Mutate()
     {
         // Call the base Mutate method
-        base.Mutate();
-        SetBounds();
-        
-        
+        for (int index = 0; index < this.Size; ++index)
+        {
+            if (Generator.Random.NextDouble() <= MutationRate)
+            {
+                IChromosome chromosome = this[index].Clone();
+                chromosome.Mutate();
+                (chromosome as BoundedDoubleArrayChromosome)?.SetBounds();
+                chromosome.Evaluate(FitnessFunction);
+                AddChromosome(chromosome);
+            }
+        }
     }
 }

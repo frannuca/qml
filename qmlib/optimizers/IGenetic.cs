@@ -1,27 +1,39 @@
 ﻿using Accord.Genetic;
+using Accord.Math.Random;
+using Accord.Statistics.Distributions.Univariate;
+
 namespace QMLib.optimizers
 {
     public abstract class NormalizedGeneticAlgorithm(int populationSize, int chromosomeLength)
     {
-        double mutationProbability = 0.1;
-        double crossoverProbability = 0.9;
-// Create a mutation operator
-        public int PopulationSize { get; } = populationSize;
-        public int ChromosomeLength { get; } = chromosomeLength;
+        static readonly IRandomNumberGenerator<double> UniformGenerator =
+            new UniformContinuousDistribution(0, 1);
+
+        static NormalizedGeneticAlgorithm()
+        {
+            Accord.Math.Random.Generator.Seed = 42;
+        }
+        
+        private const double MutationProbability = 0.1;
+
+        private const double CrossoverProbability = 0.9;
+
+        // Create a mutation operator
+        private int PopulationSize { get; } = populationSize;
+        private int ChromosomeLength { get; } = chromosomeLength;
         protected abstract FitnessFunction Fitness { get; }
 
         public double[] Fit(int maxEpochs, double fitnessTolerance, int maxIterNoChange)
         {
             
             // Create a mutation operator
-            
+            var limits = Enumerable.Range(0, ChromosomeLength).Select(_ => (0.0, 1.0)).ToArray();
             ISelectionMethod selection = new EliteSelection();
             var rndSource = new Accord.Statistics.Distributions.Univariate.UniformContinuousDistribution(0,1);
-            var chromo = new BoundedDoubleArrayChromosome(ChromosomeLength, lowerBound:0, 1 );
-            var pop = new BoundedPopulation(PopulationSize, chromo, Fitness, selection, 0, 1);
-            pop.MutationRate = mutationProbability;
-            pop.CrossoverRate= crossoverProbability;
-            pop.RandomSelectionPortion = 0.1;
+            var chromo = new BoundedDoubleArrayChromosome(ChromosomeLength,limits,UniformGenerator );
+            var pop = new BoundedPopulation(PopulationSize, chromo, Fitness, selection, 0,
+                0.1, 0.1,UniformGenerator);
+            
             double lastFitness = 0;
             int nIterNoChange = maxIterNoChange;
             for (int i = 0; i < maxEpochs; i++)
