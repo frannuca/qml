@@ -2,7 +2,7 @@
 using Accord.Math.Random;
 using Accord.Statistics.Distributions.Univariate;
 
-namespace QMLib.optimizers
+namespace qmlib.optimizers.GA
 {
     public record class GaParams(int PopulationSize,double CrossoverRate, double MutationRate, double RandomSelectionPortion);
     

@@ -1,6 +1,6 @@
 using Accord.Genetic;
 
-namespace QMLib.optimizers;
+namespace qmlib.optimizers.GA;
 
 public class FitnessFunction(Func<double[], double> fFitness) : IFitnessFunction
 {

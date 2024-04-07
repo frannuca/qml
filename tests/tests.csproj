@@ -11,4 +11,8 @@
     <ProjectReference Include="..\qmlib\qmlib.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="XPlot.Plotly" Version="4.0.6" />
+  </ItemGroup>
+
 </Project>

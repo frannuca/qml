@@ -1,9 +1,7 @@
+using Accord.Genetic;
 using Accord.Math.Random;
 
-namespace QMLib.optimizers;
-
-using Accord.Genetic;
-using Accord.Statistics.Distributions.Univariate;
+namespace qmlib.optimizers.GA;
 
 public class BoundedDoubleArrayChromosome(
     int length,

@@ -1,9 +1,7 @@
 using Accord.Genetic;
 using Accord.Math.Random;
 
-namespace QMLib.optimizers;
-
-using Accord.Genetic;
+namespace qmlib.optimizers.GA;
 
 public class BoundedPopulation: Population
 {
