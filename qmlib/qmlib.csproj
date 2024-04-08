@@ -10,6 +10,7 @@
     <PackageReference Include="Accord.Genetic" Version="3.8.0" />
     <PackageReference Include="Accord.Math" Version="3.8.0" />
     <PackageReference Include="Accord.Statistics" Version="3.8.0" />
+    <PackageReference Include="Deedle" Version="3.0.0" />
     <PackageReference Include="MathNet.Filtering" Version="0.7.0" />
   </ItemGroup>
 

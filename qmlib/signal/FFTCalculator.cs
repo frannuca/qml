@@ -5,9 +5,9 @@ namespace qmlib.signal;
 using MathNet.Numerics;
 using System.Numerics;
 
-public class FFTCalculator
+public static class FftCalculator
 {
-    public Complex[] ComputeFFT(double[] data)
+    public static Complex[] ComputeFft(double[] data)
     {
         var complexData = new Complex[data.Length];
         for (int i = 0; i < data.Length; i++)
