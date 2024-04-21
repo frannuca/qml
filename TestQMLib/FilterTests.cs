@@ -16,22 +16,25 @@ public class FilterTests
     [Test]
     public void Test1()
     {
-        int N = 1000;
-        double fs = 200;
+        int N = 150;
+        double fs = 1;
         double dt = 1 / fs;
         var time = Enumerable.Range(0, N).Select(n => dt * n);
+        var startDate = new DateTime(2023, 1, 1);
+        var dates = time.Select(t => startDate.AddDays(t));
         
-        double f1 = 5;
-        double f2 = 60;
+        double f1 = 1.0/5.0;
+        double f2 = 1.0/60;
         var signal = time
             .Select(t => 
-                Math.Sin( 2.0 * Math.PI * t * f1 )+
-                0.8*Math.Sin( 2.0 * Math.PI * t * f2 ));
+                0.2*Math.Sin( 2.0 * Math.PI * t * f1 )+
+                Math.Sin( 2.0 * Math.PI * t * f2 ));
 
-        double[] enumerable = signal as double[] ?? signal.ToArray();
-        var fftSignal = new FFTCalculator().ComputeFFT(enumerable.ToArray())?.ToArray() ?? throw new ArgumentNullException("new FFTCalculator().ComputeFFT(enumerable.ToArray())");
+        double[] signalTimeData = signal as double[] ?? signal.ToArray();
+        var fftSignal = FftCalculator.ComputeFft(signalTimeData.ToArray())?.ToArray() 
+                        ?? throw new ArgumentNullException("new FFTCalculator().ComputeFFT(enumerable.ToArray())");
         fftSignal = fftSignal.Take(N / 2).ToArray();
-        var filtered = LowPassFilter.Filter(enumerable.ToArray(), 15, fs, 5);
+        var filtered = LowPassFilter.Filter(signalTimeData.ToArray(), 1.0/10.0, fs, 5);
         ;
         // Create frequency array
         double[] freqs = Enumerable.Range(0, N/2).Select(n => n*fs/N ).ToArray();
@@ -65,14 +68,14 @@ public class FilterTests
                 x = time.ToArray(),
                 y = filtered,
                 mode = "lines",
-                name = "Time Domain Signal"
+                name = "Filtered"
             };
             var layout = new Layout.Layout(){title="Signal Magnitude vs Time"};
             var chart = Chart.Plot(new[] { fftPlot,fftPlot2 });
             chart.WithLayout(layout);
             chart.Show();
         }
-        Console.ReadLine();
+        //Console.ReadLine();
         
     }
     

@@ -31,7 +31,7 @@ public class BoundedGATests
         var auglag = new AugmentedLagrangianOptimizer(
             x => double.Pow(x[0] - expected[0], 2) + double.Pow(x[1] - expected[1], 2),
             [(0,10),(0,10)]);
-        
+        auglag.SetInitialGuess([25,25]);
         var sol2 = auglag.Optimize();
         Assert.That(actual:expected[0], Is.EqualTo(sol2[0]).Within(0.001));
         Assert.That(actual:expected[1], Is.EqualTo(sol2[1]).Within(0.001));

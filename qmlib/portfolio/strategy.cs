@@ -24,9 +24,9 @@ public class CmaStrategy(IEnumerable<(double lowfreq, double highfreq, double we
             var values = quotes.Select(x => new KeyValuePair<DateTime, double>(x.Date,x.Last)).ToArray();
             var series = new Series<DateTime, double>(values);
             var signal = series * 0.0;
-            foreach (var (lowfreq, highfreq, weight) in _filters)
+            foreach (var (lowFreq, highFreq, weight) in _filters)
             {
-                signal += weight * BandPassFilter.Filter(series, lowfreq, highfreq, 1.0, 5);
+                signal += weight * BandPassFilter.Filter(series, lowFreq, highFreq, 1.0, 5);
             }
             newPositions.Add(new Position(assetId,signal.LastValue(),double.NaN));
         }

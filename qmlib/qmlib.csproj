@@ -14,4 +14,8 @@
     <PackageReference Include="MathNet.Filtering" Version="0.7.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="regression\" />
+  </ItemGroup>
+
 </Project>

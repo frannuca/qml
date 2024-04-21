@@ -10,6 +10,7 @@ public class AugmentedLagrangianOptimizer
     private NonlinearObjectiveFunction fFitness;
     private IConstraint[] constraints;
     private readonly int numberOfVariables;
+    private double[] initialGuess = Array.Empty<double>();
 
     public AugmentedLagrangianOptimizer(
         Func<double[], double> fitness,
@@ -42,12 +43,12 @@ public class AugmentedLagrangianOptimizer
     
     public void SetInitialGuess(double[] initialGuess)
     {
-        optimizer.Solution = initialGuess;
+        this.initialGuess= initialGuess;
     }
 
     public double[] Optimize()
     {
-        bool success = optimizer.Minimize();
+        bool success = this.initialGuess.Length > 0 ? optimizer.Minimize(this.initialGuess): optimizer.Minimize();
         if (!success)
         {
             throw new Exception("Optimization failed.");
