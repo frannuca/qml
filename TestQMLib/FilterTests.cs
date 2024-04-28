@@ -1,4 +1,6 @@
 using System.Globalization;
+using Accord;
+using Deedle;
 using MathNet.Numerics;
 using qmlib.signal;
 using XPlot.Plotly;
@@ -16,12 +18,10 @@ public class FilterTests
     [Test]
     public void Test1()
     {
-        int N = 150;
+        int N = 1000;
         double fs = 1;
         double dt = 1 / fs;
         var time = Enumerable.Range(0, N).Select(n => dt * n);
-        var startDate = new DateTime(2023, 1, 1);
-        var dates = time.Select(t => startDate.AddDays(t));
         
         double f1 = 1.0/5.0;
         double f2 = 1.0/60;
@@ -30,26 +30,33 @@ public class FilterTests
                 0.2*Math.Sin( 2.0 * Math.PI * t * f1 )+
                 Math.Sin( 2.0 * Math.PI * t * f2 ));
 
-        double[] signalTimeData = signal as double[] ?? signal.ToArray();
-        var fftSignal = FftCalculator.ComputeFft(signalTimeData.ToArray())?.ToArray() 
-                        ?? throw new ArgumentNullException("new FFTCalculator().ComputeFFT(enumerable.ToArray())");
-        fftSignal = fftSignal.Take(N / 2).ToArray();
-        var filtered = LowPassFilter.Filter(signalTimeData.ToArray(), 1.0/10.0, fs, 5);
+        var signalTimeData = new Series<double,double>(time,  signal as double[] ?? signal.ToArray());
+        var fftSignal = FftCalculator.ComputeFft(signalTimeData, fs); 
+        
+        var filtered = LowPassFilter.Filter(signalTimeData, 0.05, fs, 3);
         ;
         // Create frequency array
-        double[] freqs = Enumerable.Range(0, N/2).Select(n => n*fs/N ).ToArray();
+        
         {
             // Plot the FFT magnitude vs frequency
-            var fftPlot = new Scattergl
+            var original = new Scattergl
             {
-                x = freqs,
-                y = fftSignal.Select(x =>x.Norm()),
+                x = signalTimeData.Keys.ToArray(),
+                y = signalTimeData.Values.ToArray(),
                 mode = "lines",
-                name = "FFT"
+                name = "Original"
+            };
+            
+            var filteredplot = new Scattergl
+            {
+                x = filtered.Keys.ToArray(),
+                y = filtered.Values.ToArray(),
+                mode = "lines",
+                name = "Filtered"
             };
         
-            var layout = new Layout.Layout(){title="FFT Magnitude vs Frequency"};
-            var chart = Chart.Plot(new[] { fftPlot });
+            var layout = new Layout.Layout(){title="Time signals"};
+            var chart = Chart.Plot(new[] { original, filteredplot});
             chart.WithLayout(layout);
             chart.Show();
         }
@@ -57,23 +64,17 @@ public class FilterTests
             // Plot the FFT magnitude vs frequency
             var fftPlot = new Scattergl
             {
-                x = time.ToArray(),
-                y = signal,
+                x = fftSignal.Keys.ToArray(),
+                y = fftSignal.Values.Select(x =>x.Magnitude),
                 mode = "lines",
                 name = "Time Domain Signal"
             };
         
-            var fftPlot2 = new Scattergl
-            {
-                x = time.ToArray(),
-                y = filtered,
-                mode = "lines",
-                name = "Filtered"
-            };
-            var layout = new Layout.Layout(){title="Signal Magnitude vs Time"};
-            var chart = Chart.Plot(new[] { fftPlot,fftPlot2 });
-            chart.WithLayout(layout);
-            chart.Show();
+           
+            var layout2 = new Layout.Layout(){title="Signal Spectrum Magnitude"};
+            var chart2 = Chart.Plot(new[] { fftPlot });
+            chart2.WithLayout(layout2);
+            chart2.Show();
         }
         //Console.ReadLine();
         

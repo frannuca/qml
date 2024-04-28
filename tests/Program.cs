@@ -1,51 +1,73 @@
 ﻿using System;
+using System.Data.Common;
 using System.Linq;
+using Accord;
+using Accord.Math;
+using Deedle;
 using MathNet.Numerics;
 using MathNet.Numerics.IntegralTransforms;
+using qml.quoteDownloader;
+using qmlib.signal;
 using XPlot.Plotly;
 
 public class Program
 {
-    public static void Main()
+    public async static Task Main()
     {
+        
+        var data = await YahooFinanceDownloader.DownloadTimeSeriesData("SPY", DateTime.Now.AddDays(-1000), DateTime.Now);
+        data = data - data.Mean();
+        data.DropMissing();
+        
+        // compute signal:
+        var signal_60_20 = LowPassFilter.Filter(data, 1.0/20.0, 1.0, 5)
+                                             - LowPassFilter.Filter(data, 1.0/60.0, 1.0, 5);
+        
         // Define the signal parameters
-        int N = 1000;
-        double fs = 200.0; // Sampling frequency
-        double f1 = 50.0; // Signal frequency
-        double f2 = 10.0; // Signal frequency
-
+        int N = data.KeyCount; // Number of samples
+        double fs = 1.0; // Sampling frequency
+        double dt = 1.0 / fs; // Time step
+       
         // Generate the signal
-        var t = Enumerable.Range(0, N).Select(n => n / fs).ToArray(); // Time vector
-        var signal = t.Select(time => Math.Sin(2.0 * Math.PI * f1 * time)+0.5*Math.Sin(2.0 * Math.PI * f2 * time)).ToArray(); // Signal
-
-        // Compute the FFT
-        var fft = new Complex32[signal.Length];
-        for (int i = 0; i < signal.Length; i++)
+        var spectral = FftCalculator.ComputeFft(data, fs);
+        
+        var original = new Scattergl
         {
-            fft[i] = new Complex32((float)signal[i], 0.0f);
-        }
-        Fourier.Forward(fft, FourierOptions.Matlab);
-        fft = fft.Take(fft.Length / 2).ToArray();
-
-        // Compute the frequencies for the FFT bins
-        var freqs = Enumerable.Range(0, N).Select(n => n * fs / N).ToArray();
-
-        // Compute the magnitude of the FFT
-        var magnitude = fft.Select(x => x.Magnitude).ToArray();
-
-        // Plot the FFT magnitude vs frequency
-        var fftPlot = new Scattergl
-        {
-            x = freqs,
-            y = magnitude,
+            x = data.Keys.ToArray(),
+            y = data.Values.ToArray(),
             mode = "lines",
-            name = "FFT"
+            name = "Orignal Signal"
         };
 
-        var layout = new Layout.Layout(){title="FFT Magnitude vs Frequency"};
-        var chart = Chart.Plot(new[] { fftPlot });
-        chart.WithLayout(layout);
+        var transformation = new Scattergl
+        {
+            x = spectral.Keys.Take(N/2).ToArray(),
+            y = spectral.Values.Take(N/2).Select(v => v.Magnitude).ToArray(),
+            mode = "lines",
+            name = "spectrum Signal"
+        };
+        
+        var signal = new Scattergl
+        {
+            x = signal_60_20.Keys.ToArray(),
+            y = signal_60_20.Values.Take(N).ToArray(),
+            mode = "lines",
+            name = "Signal 60-20"
+        };
+        
+        var layout = new Layout.Layout(){title="Time Domain"};
+        var chart = Chart.Plot(new[] { signal,original});
+        
+        var plot = Chart.Plot(new[] { transformation});
+        var layout2 = new Layout.Layout(){title="Spectrum Magnitude"};
+        var chart2 = Chart.Plot(new[] { transformation});
+        
+        chart.WithLayout(layout2);
         chart.Show();
-        Console.ReadLine();
+
+        chart2.WithLayout(layout2);
+        chart2.Show();
+        
+        
     }
 }
