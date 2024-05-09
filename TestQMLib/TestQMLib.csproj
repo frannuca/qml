@@ -21,6 +21,7 @@
 
     <ItemGroup>
       <ProjectReference Include="..\qmlib\qmlib.csproj" />
+      <ProjectReference Include="..\quotedownloader\quotedownloader.csproj" />
     </ItemGroup>
 
 </Project>
