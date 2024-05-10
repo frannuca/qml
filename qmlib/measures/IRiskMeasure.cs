@@ -26,7 +26,7 @@ public abstract class RiskMeasureBase(Matrix<double> covMatrix)
     {
         var lambda = riskBudgets.Sum();
         var fitness = (double[] x) => LagrangianRisk(Vector<double>.Build.DenseOfArray(x),riskBudgets,lambda);
-        var solver = new AugmentedLagrangianOptimizer(fitness, Enumerable.Repeat((1.0,500.0),N).ToArray());
+        var solver = new AugmentedLagrangianOptimizer(fitness, Enumerable.Repeat((0.001,100.0),N).ToArray());
         solver.SetInitialGuess(initialWeights.ToArray());
         var sol = solver.Optimize();
         return Vector<double>.Build.DenseOfArray(sol);
@@ -54,5 +54,17 @@ public class MinVarianceRb(Matrix<double> covMatrix): RiskMeasureBase(covMatrix)
         var rx = CovMatrix * weights.ToColumnMatrix();
         var riskContributions = weights.ToColumnMatrix().PointwiseMultiply(rx)/ totalRisk;
         return riskContributions.Column(0);
+    }
+}
+
+public static class RiskMeasureFactory
+{
+    public static RiskMeasureBase CreateRiskMeasure(string name, Matrix<double> covMatrix)
+    {
+        return name switch
+        {
+            "MinVarianceRb" => new MinVarianceRb(covMatrix),
+            _ => throw new ArgumentException("Invalid risk measure name")
+        };
     }
 }

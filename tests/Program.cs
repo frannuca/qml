@@ -11,6 +11,8 @@ using qml.quoteDownloader;
 using qmlib.signal;
 using XPlot.Plotly;
 using qmlib.measures;
+using qmlib.portfolio;
+
 public class Program
 {
     
@@ -36,34 +38,11 @@ public class Program
         portfolioSeries = (portfolioSeries/portfolioSeries.Shift(1) - 1.0).FillMissing(Direction.Forward).FillMissing(Direction.Backward);
         portfolioSeries.SaveCsv("/Users/fran/Downloads/portfolio.csv",includeRowKeys:true);
         
-        var m = Matrix<double>.Build.DenseOfArray(portfolioSeries.ToArray2D<double>());
-        
-        var N = 80;
-        var covariances = new List<Matrix<double>>();
-        if (covariances == null) throw new ArgumentNullException(nameof(covariances));
-        for(int i=N;i<m.RowCount;i++)
-        {
-            var subMatrixAtT = m.SubMatrix(i-N,N,0,m.ColumnCount);
-            var ct = subMatrixAtT.ToArray().Covariance();
-            var xC = Matrix<double>.Build.DenseOfArray(ct);
-            covariances.Add(xC);
-        }
-
-        foreach (var c in covariances)
-        {
-            var str = c.ToString();
-            var rm = new MinVarianceRb(c);
-            var rng = new ContinuousUniform(0, 1);
-            
-            int n = c.ColumnCount;
-            var w0 = new double[n];
-            rng.Samples(w0);
-            var b = Vector<double>.Build.DenseOfArray( Enumerable.Range(0, n).Select(_ => 1.0/ n).ToArray());
-            var xsol = rm.OptimizeWeigts(Vector<double>.Build.DenseOfArray(w0), c, b);
-            var rc = rm.RiskContributions(xsol);
-            var rcError = rm.RiskContributionError(xsol, b);
-        }
-
+        var pcalc = new PortfolioCalculator("MinVarianceRb");
+        var results = pcalc.Run(portfolioSeries, 80, 0.07);
+        var frame = Frame.FromRecords(results);
+        string filepath = "/Users/fran/Downloads/portfolioResults.csv";
+        frame.SaveCsv(filepath,includeRowKeys:true);
     }
     public async static Task Main()
     {
