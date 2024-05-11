@@ -6,22 +6,19 @@ using System;
 
 public class AugmentedLagrangianOptimizer
 {
-    private AugmentedLagrangian optimizer;
-    private NonlinearObjectiveFunction fFitness;
-    private IConstraint[] constraints;
-    private readonly int numberOfVariables;
-    private double[] initialGuess = Array.Empty<double>();
+    private readonly AugmentedLagrangian _optimizer;
+    private double[] _initialGuess = [];
 
     public AugmentedLagrangianOptimizer(
         Func<double[], double> fitness,
         (double lowerLimit, double upperLimit)[] boundaries)
     {
-        numberOfVariables = boundaries.Length;
+        var numberOfVariables = boundaries.Length;
         // Now, we create an optimizer
         var g = FiniteDifferences.Gradient(fitness, numberOfVariables, 1);
         
-        fFitness = new NonlinearObjectiveFunction(numberOfVariables, fitness, gradient:(double[] x) => g(x));
-        constraints = boundaries.SelectMany<(double lowerLimit, double upperLimit),IConstraint>((bound, idx) =>
+        var fFitness = new NonlinearObjectiveFunction(numberOfVariables, fitness, gradient:(double[] x) => g(x));
+        IConstraint[] constraints = boundaries.SelectMany<(double lowerLimit, double upperLimit),IConstraint>((bound, idx) =>
         {
             IConstraint a = new NonlinearConstraint(
                 fFitness,
@@ -38,22 +35,22 @@ public class AugmentedLagrangianOptimizer
 
             return [a,b];
         }).ToArray();
-        optimizer=new AugmentedLagrangian(fFitness, constraints);
+        _optimizer=new AugmentedLagrangian(fFitness, constraints);
     }
     
     public void SetInitialGuess(double[] initialGuess)
     {
-        this.initialGuess= initialGuess;
+        this._initialGuess= initialGuess;
     }
 
     public double[] Optimize()
     {
-        bool success = this.initialGuess.Length > 0 ? optimizer.Minimize(this.initialGuess): optimizer.Minimize();
+        bool success = this._initialGuess.Length > 0 ? _optimizer.Minimize(this._initialGuess): _optimizer.Minimize();
         if (!success)
         {
             throw new Exception("Optimization failed.");
         }
 
-        return optimizer.Solution;
+        return _optimizer.Solution;
     }
 }

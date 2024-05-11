@@ -18,7 +18,7 @@ public abstract class RiskMeasureBase(Matrix<double> covMatrix)
         var logW = weights.Map(Math.Log2);
         var sum =  riskBudgets * logW;
         var error = risk - lambda * sum;
-        Console.WriteLine(error);
+        //Console.WriteLine(error);
         return error;
     }
     
@@ -26,7 +26,7 @@ public abstract class RiskMeasureBase(Matrix<double> covMatrix)
     {
         var lambda = riskBudgets.Sum();
         var fitness = (double[] x) => LagrangianRisk(Vector<double>.Build.DenseOfArray(x),riskBudgets,lambda);
-        var solver = new AugmentedLagrangianOptimizer(fitness, Enumerable.Repeat((0.001,100.0),N).ToArray());
+        var solver = new NelderMeadOptimizer(fitness, Enumerable.Repeat((0.001,double.PositiveInfinity),N).ToArray());
         solver.SetInitialGuess(initialWeights.ToArray());
         var sol = solver.Optimize();
         return Vector<double>.Build.DenseOfArray(sol);
@@ -52,7 +52,7 @@ public class MinVarianceRb(Matrix<double> covMatrix): RiskMeasureBase(covMatrix)
     {
         var totalRisk = CalculateRisk(weights);
         var rx = CovMatrix * weights.ToColumnMatrix();
-        var riskContributions = weights.ToColumnMatrix().PointwiseMultiply(rx)/ totalRisk;
+        var riskContributions = weights.ToColumnMatrix().PointwiseMultiply(rx)/ (totalRisk+1e-12);
         return riskContributions.Column(0);
     }
 }

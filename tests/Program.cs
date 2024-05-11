@@ -5,6 +5,7 @@ using Accord;
 using Accord.Math;
 using Accord.Statistics;
 using Deedle;
+using Deedle.Vectors;
 using MathNet.Numerics.Distributions;
 using MathNet.Numerics.LinearAlgebra;
 using qml.quoteDownloader;
@@ -20,27 +21,28 @@ public class Program
     {
         
         Frame<DateTime, string> portfolioSeries;
-        Series<DateTime, double> ZB = await YahooFinanceDownloader.DownloadTimeSeriesData("ZB=F", DateTime.Now.AddDays(-1000), DateTime.Now);
-        Series<DateTime, double> BZ = await YahooFinanceDownloader.DownloadTimeSeriesData("BZ=F", DateTime.Now.AddDays(-1000), DateTime.Now);
-        Series<DateTime, double> QM = await YahooFinanceDownloader.DownloadTimeSeriesData("QM=F", DateTime.Now.AddDays(-1000), DateTime.Now);
+        Series<DateTime, double> DJI = await YahooFinanceDownloader.DownloadTimeSeriesData("^DJI", DateTime.Now.AddDays(-1000), DateTime.Now);
+        Series<DateTime, double> DAX = await YahooFinanceDownloader.DownloadTimeSeriesData("DAX", DateTime.Now.AddDays(-1000), DateTime.Now);
+        Series<DateTime, double> FTSE = await YahooFinanceDownloader.DownloadTimeSeriesData("^FTSE", DateTime.Now.AddDays(-1000), DateTime.Now);
         Series<DateTime, double> SPX = await YahooFinanceDownloader.DownloadTimeSeriesData("^SPX", DateTime.Now.AddDays(-1000), DateTime.Now);
-        Series<DateTime, double> ALI = await YahooFinanceDownloader.DownloadTimeSeriesData("ALI=F", DateTime.Now.AddDays(-1000), DateTime.Now);
-        Series<DateTime, double> ZL = await YahooFinanceDownloader.DownloadTimeSeriesData("ZL=F", DateTime.Now.AddDays(-1000), DateTime.Now);
+        Series<DateTime, double> BZ = await YahooFinanceDownloader.DownloadTimeSeriesData("BZ=F", DateTime.Now.AddDays(-1000), DateTime.Now);
+        Series<DateTime, double> CT = await YahooFinanceDownloader.DownloadTimeSeriesData("CT=F", DateTime.Now.AddDays(-1000), DateTime.Now);
         
         
         portfolioSeries = Frame.FromColumns([
-            new KeyValuePair<string, Series<DateTime,double>>("ZB", ZB.DropMissing()), 
-            new KeyValuePair<string, Series<DateTime,double>>("BZ", BZ.DropMissing()), 
-            new KeyValuePair<string, Series<DateTime,double>>("QM", QM.DropMissing()), 
-            new KeyValuePair<string, Series<DateTime,double>>("ALI", ALI.DropMissing()),
-            new KeyValuePair<string, Series<DateTime,double>>("ZL", ZL.DropMissing()),
-            new KeyValuePair<string, Series<DateTime,double>>("CU", SPX.DropMissing())]);
+            new KeyValuePair<string, Series<DateTime,double>>("DJI", DJI.DropMissing()), 
+            new KeyValuePair<string, Series<DateTime,double>>("DAX", DAX.DropMissing()), 
+            new KeyValuePair<string, Series<DateTime,double>>("FTSE", FTSE.DropMissing()), 
+            new KeyValuePair<string, Series<DateTime,double>>("BZ=F", BZ.DropMissing()),
+            new KeyValuePair<string, Series<DateTime,double>>("CT", CT.DropMissing()),
+            new KeyValuePair<string, Series<DateTime,double>>("SPX", SPX.DropMissing())]);
         portfolioSeries = (portfolioSeries/portfolioSeries.Shift(1) - 1.0).FillMissing(Direction.Forward).FillMissing(Direction.Backward);
         portfolioSeries.SaveCsv("/Users/fran/Downloads/portfolio.csv",includeRowKeys:true);
         
         var pcalc = new PortfolioCalculator("MinVarianceRb");
         var results = pcalc.Run(portfolioSeries, 80, 0.07);
-        var frame = Frame.FromRecords(results);
+        var frame = Frame.FromRows(results.Select(r => r.ToSeries()));
+        
         string filepath = "/Users/fran/Downloads/portfolioResults.csv";
         frame.SaveCsv(filepath,includeRowKeys:true);
     }

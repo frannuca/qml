@@ -8,7 +8,38 @@ using MathNet.Numerics.LinearAlgebra;
 
 namespace qmlib.portfolio;
 
-public record struct PortfolioOptimizationResult(DateTime Date, Series<string,double> Weights, Series<string,double> RiskContributions, double PnL);
+public readonly record struct PortfolioOptimizationResult(
+    DateTime Date,
+    Series<string, double> Weights,
+    Series<string, double> RiskContributions,
+    double PnL)
+{
+    public Series<string,object> ToSeries()
+    {
+        try
+        {
+            var (date, weights, rc, pnl) = this;
+            var wkv = weights.Keys.Select(c => new KeyValuePair<string,object>($"{c}_Weight", weights[c]));
+            var rckv = rc.Keys.Select(c => new KeyValuePair<string,object>($"{c}_RC", rc[c]));
+            var pnlkv = new []{new KeyValuePair<string,object>("PnL", pnl)};
+            var row = new List<KeyValuePair<string,object>>();
+            row.Add(new KeyValuePair<string, object>("Date",date));
+            row.AddRange(wkv);
+            row.AddRange(rckv);
+            row.AddRange(pnlkv);
+            var rowSeries = new Series<string,object>(row);
+            var frame = Frame.FromRows([rowSeries]);
+            frame.IndexRows<DateTime>("Date");
+            return frame.GetRowAt<object>(0);
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            throw;
+        }
+        
+    }
+}
 
 public class PortfolioCalculator(string riskMeasureName)
 {
@@ -41,13 +72,17 @@ public class PortfolioCalculator(string riskMeasureName)
         var results = new List<PortfolioOptimizationResult>();
         foreach (var (date,c) in covariances)
         {
+            Console.WriteLine($"Computing {date}");
             var rm = RiskMeasureFactory.CreateRiskMeasure(riskMeasureName,c);
             var str = c.ToString();
-            var b = Vector<double>.Build.DenseOfArray( Enumerable.Range(0, n).Select(_ => targetVol/ n).ToArray());
+            var dailyvol=targetVol/Math.Sqrt(250);
+            var b = Vector<double>.Build.DenseOfArray( Enumerable.Range(0, n).Select(_ => 1.0/ n).ToArray());
             var xsol = rm.OptimizeWeigts(Vector<double>.Build.DenseOfArray(w0), c, b);
             var xxsol = new Series<string, double>(portfolioSeries.ColumnKeys, xsol);
             
             var rc = rm.RiskContributions(xsol);
+            var scale = dailyvol / (rc.Sum()+1e-10);
+            xxsol *=scale;
             var xrc = new Series<string,double>(portfolioSeries.ColumnKeys,rc);
             var rcError = rm.RiskContributionError(xsol, b);
             
@@ -56,6 +91,6 @@ public class PortfolioCalculator(string riskMeasureName)
             results.Add(new PortfolioOptimizationResult(date,xxsol,xrc,pnl));
         }
 
-        return results;
+        return results.ToArray();
     }
 }
