@@ -60,7 +60,9 @@ public class PortfolioCalculator(string riskMeasureName)
         }
         return covariances.ToArray();
     }
-    public IEnumerable<PortfolioOptimizationResult> Run(Frame<DateTime, string> portfolioSeries, int nCovarianceWindow, double targetVol)
+    
+    public IEnumerable<PortfolioOptimizationResult> Run(Frame<DateTime, string> portfolioSeries, int nCovarianceWindow, double targetVol,
+        IDictionary<DateTime, Series<string, double>>? weightModulationSignal=null)
     {
         var rng = new ContinuousUniform(0, 1);
         int n = portfolioSeries.ColumnCount;
@@ -78,9 +80,16 @@ public class PortfolioCalculator(string riskMeasureName)
             var dailyvol=targetVol/Math.Sqrt(250);
             var b = Vector<double>.Build.DenseOfArray( Enumerable.Range(0, n).Select(_ => 1.0/ n).ToArray());
             var xsol = rm.OptimizeWeigts(Vector<double>.Build.DenseOfArray(w0), c, b);
+            
+            
+            if(weightModulationSignal is not null && weightModulationSignal.TryGetValue(date, out var signal))
+            {
+                var xsignal = Vector<double>.Build.DenseOfArray(portfolioSeries.ColumnKeys.Select(c => signal[c]).ToArray());
+                xsol  = xsol.PointwiseMultiply(xsignal);
+            }
+            var rc = rm.RiskContributions(xsol);
             var xxsol = new Series<string, double>(portfolioSeries.ColumnKeys, xsol);
             
-            var rc = rm.RiskContributions(xsol);
             var scale = dailyvol / (rc.Sum()+1e-10);
             xxsol *=scale;
             var xrc = new Series<string,double>(portfolioSeries.ColumnKeys,rc);

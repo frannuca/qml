@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Data.Common;
 using System.Linq;
+using System.Runtime.InteropServices.JavaScript;
 using Accord;
 using Accord.Math;
 using Accord.Statistics;
@@ -16,8 +17,18 @@ using qmlib.portfolio;
 
 public class Program
 {
-    
-    public async static Task Setup()
+
+    static IDictionary<DateTime,Series<string,double>> ComputeSignal(Frame<DateTime, string> portfolioSeries)
+    {
+        var signalCalc = new SignalCalculator(portfolioSeries);
+        return signalCalc.Run(new []
+        {
+            (20,10,1.0),
+            
+        }, 30);
+    }
+
+public static async Task Setup()
     {
         
         Frame<DateTime, string> portfolioSeries;
@@ -39,8 +50,9 @@ public class Program
         portfolioSeries = (portfolioSeries/portfolioSeries.Shift(1) - 1.0).FillMissing(Direction.Forward).FillMissing(Direction.Backward);
         portfolioSeries.SaveCsv("/Users/fran/Downloads/portfolio.csv",includeRowKeys:true);
         
+        var modulationSignal = ComputeSignal(portfolioSeries);
         var pcalc = new PortfolioCalculator("MinVarianceRb");
-        var results = pcalc.Run(portfolioSeries, 80, 0.07);
+        var results = pcalc.Run(portfolioSeries, 80, 0.07,modulationSignal);
         var frame = Frame.FromRows(results.Select(r => r.ToSeries()));
         
         string filepath = "/Users/fran/Downloads/portfolioResults.csv";
@@ -58,9 +70,10 @@ public class Program
         var signal_60_20a = BandPassFilter.Filter(data, 1.0/40,1.0/20, 1.0, 6)*scaling;
                                             // - LowPassFilter.Filter(data, 1.0/40.0, 1.0, 5);
         
-        var signal_60_20 = BandPassFilter.Filter(signal_60_20a, 1.0/40.0,1.0/20.0, 1.0, 6);
-                                               // - LowPassFilter.Filter(signal_60_20a, 1.0/40.0, 1.0, 5);
+        var signal_60_20 = LowPassFilter.Filter(data, 1.0/20.0, 1.0, 6)
+                                               - LowPassFilter.Filter(data, 1.0/40.0, 1.0, 6);
 
+        signal_60_20 *= 3;
         // Define the signal parameters
         int N = data.KeyCount; // Number of samples
         double fs = 1.0; // Sampling frequency
@@ -90,14 +103,14 @@ public class Program
             x = signal_60_20.Keys.ToArray(),
             y = signal_60_20.Values.Take(N).ToArray(),
             mode = "lines",
-            name = "Signal 60-20 second derivatives"
+            name = "Signal low passes"
         };
         var signala = new Scattergl
         {
             x = signal_60_20a.Keys.ToArray(),
             y = signal_60_20a.Values.Take(N).ToArray(),
             mode = "lines",
-            name = "Signal 60-20 first derivatives"
+            name = "Signal BandPass"
         };
         var layout = new Layout.Layout(){title="Time Domain"};
         var chart = Chart.Plot(new[] { signal,signala,original});
