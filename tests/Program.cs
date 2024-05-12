@@ -23,9 +23,9 @@ public class Program
         var signalCalc = new SignalCalculator(portfolioSeries);
         return signalCalc.Run(new []
         {
-            (20,15,1.0),
-            (60,20,0.25),
-            (100,50,0.25),
+            (40,20,1.0),
+            (60,20,0.15),
+            (100,50,0.15),
             
         }, 120);
     }
@@ -51,7 +51,16 @@ public static async Task Setup()
             new KeyValuePair<string, Series<DateTime,double>>("SPX", SPX.DropMissing())]);
         portfolioSeries = (portfolioSeries/portfolioSeries.Shift(1) - 1.0).FillMissing(Direction.Forward).FillMissing(Direction.Backward);
         portfolioSeries.SaveCsv("/Users/fran/Downloads/portfolio.csv",includeRowKeys:true);
-        
+
+        var popt = new PortfolioOptimizer(new PortfolioOptimizationData()
+        {
+            portfolioSeries = portfolioSeries,
+            nCovarianceWindow = 80,
+            singleFilterWindow = 200,
+            tragetVolatility = 0.07,
+            Filters = new[] { (20, 60), (50, 100) }
+        });
+        var weights = popt.Run();
         var modulationSignal = ComputeSignal(portfolioSeries);
         var pcalc = new PortfolioCalculator("MinVarianceRb");
         var results = pcalc.Run(portfolioSeries, 80, 0.07,modulationSignal);
@@ -60,7 +69,7 @@ public static async Task Setup()
         string filepath = "/Users/fran/Downloads/portfolioResults.csv";
         frame.SaveCsv(filepath,includeRowKeys:true);
     }
-    public async static Task Main()
+    public static async Task Main()
     {
 
         await Setup();

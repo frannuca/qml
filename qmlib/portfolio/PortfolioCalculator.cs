@@ -76,7 +76,7 @@ public class PortfolioCalculator(string riskMeasureName)
         {
             var date = portfolioSeries.GetRowKeyAt(idate - 1);
             var datepnl = portfolioSeries.GetRowKeyAt(idate);
-            Console.WriteLine($"Computing {date}");
+            //Console.WriteLine($"Computing {date}");
             var rm = RiskMeasureFactory.CreateRiskMeasure(riskMeasureName,c);
             var str = c.ToString();
             var dailyvol=targetVol/Math.Sqrt(250);
