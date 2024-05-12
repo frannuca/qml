@@ -23,9 +23,11 @@ public class Program
         var signalCalc = new SignalCalculator(portfolioSeries);
         return signalCalc.Run(new []
         {
-            (20,10,1.0),
+            (20,15,1.0),
+            (60,20,0.25),
+            (100,50,0.25),
             
-        }, 30);
+        }, 120);
     }
 
 public static async Task Setup()

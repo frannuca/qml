@@ -43,12 +43,12 @@ public readonly record struct PortfolioOptimizationResult(
 
 public class PortfolioCalculator(string riskMeasureName)
 {
-    private (DateTime date,Matrix<double>Cov)[] ComputeCovariances(Frame<DateTime, string> portfolioSeries,int nCovarianceWindow)
+    private (int idxdate,Matrix<double>Cov)[] ComputeCovariances(Frame<DateTime, string> portfolioSeries,int nCovarianceWindow)
     {
         var m = Matrix<double>.Build.DenseOfArray(portfolioSeries.ToArray2D<double>());
         
         var N = nCovarianceWindow;
-        var covariances = new List<(DateTime date,Matrix<double> cov)>();
+        var covariances = new List<(int idx,Matrix<double> cov)>();
         if (covariances == null) throw new ArgumentNullException(nameof(covariances));
         for(int i=N;i<m.RowCount;i++)
         {
@@ -56,7 +56,7 @@ public class PortfolioCalculator(string riskMeasureName)
             var subMatrixAtT = m.SubMatrix(i-N,N,0,m.ColumnCount);
             var ct = subMatrixAtT.ToArray().Covariance();
             var xC = Matrix<double>.Build.DenseOfArray(ct);
-            covariances.Add((date:date,xC));
+            covariances.Add((i,xC));
         }
         return covariances.ToArray();
     }
@@ -72,8 +72,10 @@ public class PortfolioCalculator(string riskMeasureName)
         
         var covariances = ComputeCovariances(portfolioSeries,nCovarianceWindow);
         var results = new List<PortfolioOptimizationResult>();
-        foreach (var (date,c) in covariances)
+        foreach (var (idate,c) in covariances)
         {
+            var date = portfolioSeries.GetRowKeyAt(idate - 1);
+            var datepnl = portfolioSeries.GetRowKeyAt(idate);
             Console.WriteLine($"Computing {date}");
             var rm = RiskMeasureFactory.CreateRiskMeasure(riskMeasureName,c);
             var str = c.ToString();
@@ -95,9 +97,9 @@ public class PortfolioCalculator(string riskMeasureName)
             var xrc = new Series<string,double>(portfolioSeries.ColumnKeys,rc);
             var rcError = rm.RiskContributionError(xsol, b);
             
-            var ret = portfolioSeries.Rows[date].As<double>();
+            var ret = portfolioSeries.Rows[datepnl].As<double>();
             var pnl = (ret * xxsol).Sum();
-            results.Add(new PortfolioOptimizationResult(date,xxsol,xrc,pnl));
+            results.Add(new PortfolioOptimizationResult(datepnl,xxsol,xrc,pnl));
         }
 
         return results.ToArray();
