@@ -8,9 +8,9 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <PackageReference Include="Deedle" Version="3.0.0" />
-      <PackageReference Include="YahooFinance.NET" Version="4.0.0" />
-      <PackageReference Include="YahooFinanceApi" Version="2.3.3" />
+        <PackageReference Include="Deedle" Version="3.0.0"/>
+        <PackageReference Include="YahooFinance.NET" Version="4.0.0"/>
+        <PackageReference Include="YahooFinanceApi" Version="2.3.3"/>
     </ItemGroup>
 
 </Project>

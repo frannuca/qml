@@ -3,8 +3,10 @@ using Accord.Math.Random;
 
 namespace qmlib.optimizers.GA;
 
-public class BoundedPopulation: Population
+public class BoundedPopulation : Population
 {
+    private readonly IRandomNumberGenerator<double> _uniformGenerator;
+
     public BoundedPopulation(
         int size,
         BoundedDoubleArrayChromosome ancestor,
@@ -16,21 +18,19 @@ public class BoundedPopulation: Population
         IRandomNumberGenerator<double> uniformGenerator)
         : base(size, ancestor, fitnessFunction, selectionMethod)
     {
-        this.CrossoverRate = crossoverRate;
-        this.MutationRate = mutationRate;
-        this.RandomSelectionPortion = randomSelectionPortion;
-        this._uniformGenerator=uniformGenerator;
+        CrossoverRate = crossoverRate;
+        MutationRate = mutationRate;
+        RandomSelectionPortion = randomSelectionPortion;
+        _uniformGenerator = uniformGenerator;
     }
 
-    private readonly IRandomNumberGenerator<double> _uniformGenerator;
     public override void Crossover()
     {
-        for (int index = 1; index < this.Size; index += 2)
-        {
+        for (var index = 1; index < Size; index += 2)
             if (_uniformGenerator.Generate() <= CrossoverRate)
             {
-                IChromosome chromosome = this[index - 1].Clone();
-                IChromosome pair = this[index].Clone();
+                var chromosome = this[index - 1].Clone();
+                var pair = this[index].Clone();
                 chromosome.Crossover(pair);
                 (chromosome as BoundedDoubleArrayChromosome)?.SetBounds();
                 (pair as BoundedDoubleArrayChromosome)?.SetBounds();
@@ -39,21 +39,19 @@ public class BoundedPopulation: Population
                 AddChromosome(chromosome);
                 AddChromosome(pair);
             }
-        }
     }
+
     public override void Mutate()
     {
         // Call the base Mutate method
-        for (int index = 0; index < this.Size; ++index)
-        {
+        for (var index = 0; index < Size; ++index)
             if (Generator.Random.NextDouble() <= MutationRate)
             {
-                IChromosome chromosome = this[index].Clone();
+                var chromosome = this[index].Clone();
                 chromosome.Mutate();
                 (chromosome as BoundedDoubleArrayChromosome)?.SetBounds();
                 chromosome.Evaluate(FitnessFunction);
                 AddChromosome(chromosome);
             }
-        }
     }
 }

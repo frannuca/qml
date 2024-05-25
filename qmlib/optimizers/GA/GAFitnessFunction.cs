@@ -9,12 +9,8 @@ public class FitnessFunction(Func<double[], double> fFitness) : IFitnessFunction
     public double Evaluate(IChromosome chromosome)
     {
         var dchromosome = chromosome as DoubleArrayChromosome;
-        if(dchromosome == null)
-        {
-            throw new ArgumentException("Only double array chromosomes are expected UUU");
-        }
+        if (dchromosome == null) throw new ArgumentException("Only double array chromosomes are expected UUU");
 
         return Fitness(dchromosome.Value);
-
     }
 }
