@@ -14,4 +14,8 @@
     <PackageReference Include="MathNet.Filtering" Version="0.7.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Compile Remove="signal\lowpass2.cs" />
+  </ItemGroup>
+
 </Project>

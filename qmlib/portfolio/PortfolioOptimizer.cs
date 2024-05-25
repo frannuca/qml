@@ -1,5 +1,6 @@
 using Accord;
 using Deedle;
+using MathNet.Numerics.LinearAlgebra;
 using qmlib.optimizers.GA;
 
 namespace qmlib.portfolio;
@@ -14,40 +15,39 @@ public class PortfolioOptimizationData
 }
 public class PortfolioOptimizer(PortfolioOptimizationData data)
 {
-    double fitness(double[] x)
+   
+    double Fitness(double[] x)
     {
-        var weights = x.Take(data.portfolioSeries.ColumnCount).ToArray();
-        var filterWeights = x.Skip(data.portfolioSeries.ColumnCount).ToArray();
+        var filterWeights = x.ToArray();
         
         var signalCalc = new SignalCalculator(data.portfolioSeries);
         var signal = signalCalc
             .Run(data.Filters.Select((y,i) => (y.shortWindoe, y.longWindow, filterWeights[i])).ToArray(), data.singleFilterWindow);
+        var framesignal = Frame.FromRows(signal);
         
-        var pcalc = new PortfolioCalculator("MinVarianceRb");
-        var results = pcalc.Run(data.portfolioSeries, data.nCovarianceWindow, data.tragetVolatility,signal);
-
-        var pnlfinal = results.Select(x => x.PnL).Sum();
-        var pnl0 = -results.First().PnL;
+        var pnlseries = data.portfolioSeries.Shift(1)*framesignal;
+        var pnl2 = pnlseries.FillMissing(0).GetColumns<double>().Values.Aggregate((a,b)=>a+b);
+        var pnl = pnl2.Values.ToArray();
+        var pnlfinal = pnl.Sum();
+        var pnl0 = pnl[0];
         var r = pnlfinal - pnl0;
         var xstr = String.Join(',', x);
-        Console.WriteLine($"{xstr} ->"+r);
+        //Console.WriteLine($"{xstr} ->"+r);
         return -r;
 
     }
 
     public double[] Run()
     {
-        var pGaParams = new GaParams(PopulationSize: 20, CrossoverRate: 0.8, MutationRate: 0.1,
+        var pGaParams = new GaParams(PopulationSize: 10, CrossoverRate: 0.8, MutationRate: 0.1,
             RandomSelectionPortion: 0.1);
         
         var bounds = new List<(double,double)>();
-        var w = data.portfolioSeries.ColumnKeys.Select(_ => (0.001, 100.0));
-        bounds.AddRange(w);
-        var fw = data.Filters.Select(_ => (0.001, 1.0));
+        var fw = data.Filters.Select(_ => (-1.0, 1.0));
         bounds.AddRange(fw);
         
-        var ga = new GaOpt(pGaParams, bounds.ToArray(), fitness);
+        var ga = new GaOpt(pGaParams, bounds.ToArray(), Fitness);
 
-        return ga.Fit(50,0.01,int.MaxValue);
+        return ga.Fit(50,0.01,3);
     }
 }

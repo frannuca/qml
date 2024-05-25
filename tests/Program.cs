@@ -9,37 +9,35 @@ using Deedle;
 using Deedle.Vectors;
 using MathNet.Numerics.Distributions;
 using MathNet.Numerics.LinearAlgebra;
+using MathNet.Numerics.Random;
 using qml.quoteDownloader;
 using qmlib.signal;
 using XPlot.Plotly;
 using qmlib.measures;
 using qmlib.portfolio;
+using Index = System.Index;
 
 public class Program
 {
 
-    static IDictionary<DateTime,Series<string,double>> ComputeSignal(Frame<DateTime, string> portfolioSeries)
+    static IDictionary<DateTime,Series<string,double>> ComputeSignal(Frame<DateTime, string> portfolioSeries, int nWindow,
+        (int shortWindow, int longWindow, double weight)[] filters)
     {
         var signalCalc = new SignalCalculator(portfolioSeries);
-        return signalCalc.Run(new []
-        {
-            (40,20,1.0),
-            (60,20,0.15),
-            (100,50,0.15),
-            
-        }, 120);
+        return signalCalc.Run(filters, nWindow);
     }
+    
 
 public static async Task Setup()
-    {
-        
+{
+    const int n = 10 * 250;
         Frame<DateTime, string> portfolioSeries;
-        Series<DateTime, double> DJI = await YahooFinanceDownloader.DownloadTimeSeriesData("^DJI", DateTime.Now.AddDays(-1000), DateTime.Now);
-        Series<DateTime, double> DAX = await YahooFinanceDownloader.DownloadTimeSeriesData("DAX", DateTime.Now.AddDays(-1000), DateTime.Now);
-        Series<DateTime, double> FTSE = await YahooFinanceDownloader.DownloadTimeSeriesData("^FTSE", DateTime.Now.AddDays(-1000), DateTime.Now);
-        Series<DateTime, double> SPX = await YahooFinanceDownloader.DownloadTimeSeriesData("^SPX", DateTime.Now.AddDays(-1000), DateTime.Now);
-        Series<DateTime, double> BZ = await YahooFinanceDownloader.DownloadTimeSeriesData("BZ=F", DateTime.Now.AddDays(-1000), DateTime.Now);
-        Series<DateTime, double> CT = await YahooFinanceDownloader.DownloadTimeSeriesData("CT=F", DateTime.Now.AddDays(-1000), DateTime.Now);
+        Series<DateTime, double> DJI = await YahooFinanceDownloader.DownloadTimeSeriesData("^DJI", DateTime.Now.AddDays(-n), DateTime.Now);
+        Series<DateTime, double> DAX = await YahooFinanceDownloader.DownloadTimeSeriesData("DAX", DateTime.Now.AddDays(-n), DateTime.Now);
+        Series<DateTime, double> FTSE = await YahooFinanceDownloader.DownloadTimeSeriesData("^FTSE", DateTime.Now.AddDays(-n), DateTime.Now);
+        Series<DateTime, double> SPX = await YahooFinanceDownloader.DownloadTimeSeriesData("^SPX", DateTime.Now.AddDays(-n), DateTime.Now);
+        Series<DateTime, double> BZ = await YahooFinanceDownloader.DownloadTimeSeriesData("BZ=F", DateTime.Now.AddDays(-n), DateTime.Now);
+        Series<DateTime, double> CT = await YahooFinanceDownloader.DownloadTimeSeriesData("CT=F", DateTime.Now.AddDays(-n), DateTime.Now);
         
         
         portfolioSeries = Frame.FromColumns([
@@ -51,40 +49,53 @@ public static async Task Setup()
             new KeyValuePair<string, Series<DateTime,double>>("SPX", SPX.DropMissing())]);
         portfolioSeries = (portfolioSeries/portfolioSeries.Shift(1) - 1.0).FillMissing(Direction.Forward).FillMissing(Direction.Backward);
         portfolioSeries.SaveCsv("/Users/fran/Downloads/portfolio.csv",includeRowKeys:true);
-
+        int NWindow = 100;
+        var filter_windows = new []{(5, 10), (5, 20),(10, 30),(5, 30)};
         var popt = new PortfolioOptimizer(new PortfolioOptimizationData()
         {
             portfolioSeries = portfolioSeries,
             nCovarianceWindow = 80,
-            singleFilterWindow = 200,
+            singleFilterWindow = NWindow,
             tragetVolatility = 0.07,
-            Filters = new[] { (20, 60), (50, 100) }
+            Filters = filter_windows
         });
         var weights = popt.Run();
-        var modulationSignal = ComputeSignal(portfolioSeries);
+        /*double[] weights =
+        [
+            1.0005140577789464, 0.7762156546621752, 0.30823891112033225, 0.5021794599025414, 0.7710478220931477,
+            0.21434077816751823, 0.7551946345508074
+        ];*/
+        var filterweights = filter_windows.Zip(weights)
+            .Select(kv => (kv.First.Item1, kv.First.Item2, kv.Second)).ToArray();
+        var modulationSignal = ComputeSignal(portfolioSeries,NWindow,filterweights);
         var pcalc = new PortfolioCalculator("MinVarianceRb");
         var results = pcalc.Run(portfolioSeries, 80, 0.07,modulationSignal);
-        var frame = Frame.FromRows(results.Select(r => r.ToSeries()));
-        
+        var frame = Frame.FromRows(results.Select(r => r.ToSeries())).IndexRowsWith(results.Select(l => l.Date));
+        var modulationFrame = Frame.FromRows(modulationSignal.ToArray());
+        var totalFrame = frame.Join(modulationFrame,JoinKind.Outer);
         string filepath = "/Users/fran/Downloads/portfolioResults.csv";
-        frame.SaveCsv(filepath,includeRowKeys:true);
+        var EQW = portfolioSeries.Transpose().Sum()/portfolioSeries.ColumnCount;
+        totalFrame.AddColumn("EQW",EQW);
+        totalFrame.SaveCsv(filepath,includeRowKeys:true);
+        
     }
     public static async Task Main()
     {
-
-        await Setup();
+        //await Setup();
         var data = await YahooFinanceDownloader.DownloadTimeSeriesData("SPY", DateTime.Now.AddDays(-1000), DateTime.Now);
         data = data - data.Mean();
         data.DropMissing();
         var scaling = 10.0;
-        // compute signal:
-        var signal_60_20a = BandPassFilter.Filter(data, 1.0/40,1.0/20, 1.0, 6)*scaling;
-                                            // - LowPassFilter.Filter(data, 1.0/40.0, 1.0, 5);
-        
-        var signal_60_20 = LowPassFilter.Filter(data, 1.0/20.0, 1.0, 6)
-                                               - LowPassFilter.Filter(data, 1.0/40.0, 1.0, 6);
 
-        signal_60_20 *= 3;
+        int shortWindow = 10;
+        int longWindow = 40;
+        // compute signal:
+        var signal_60_20 = LowPassFilter.Filter(data, 0.5/shortWindow, 1.0, 11)
+                                                - LowPassFilter.Filter(data, 0.5/longWindow, 1.0, 11);
+        
+        
+        var signal_60_20_MA = CrossMovingAverage.ComputeCrossMovingAverage(data, shortWindow, longWindow);
+        
         // Define the signal parameters
         int N = data.KeyCount; // Number of samples
         double fs = 1.0; // Sampling frequency
@@ -114,14 +125,16 @@ public static async Task Setup()
             x = signal_60_20.Keys.ToArray(),
             y = signal_60_20.Values.Take(N).ToArray(),
             mode = "lines",
-            name = "Signal low passes"
+            name = "Signal Filter"
         };
+        
+        
         var signala = new Scattergl
         {
-            x = signal_60_20a.Keys.ToArray(),
-            y = signal_60_20a.Values.Take(N).ToArray(),
+            x = signal_60_20_MA.Keys.ToArray(),
+            y = signal_60_20_MA.Values.Take(N).ToArray(),
             mode = "lines",
-            name = "Signal BandPass"
+            name = "Signal CMA"
         };
         var layout = new Layout.Layout(){title="Time Domain"};
         var chart = Chart.Plot(new[] { signal,signala,original});

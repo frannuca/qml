@@ -12,38 +12,28 @@ public class SignalCalculator(Frame<DateTime, string> portfolioSeries)
     double l95 = Normal.Inverse(0.95);
     double l9 = Normal.Inverse(0.9);
     double l8 = Normal.Inverse(0.8);
-    private double quantifyScaling(double x)
+    private static double QuantifyScaling(double x)
     {
-        if (x > l95)
-            return 2.0;
-        if (x > l9)
-             return 1.5;
-        if (x > l8)  
-            return 1.1;
-        if (x < -l95)
-        {
-            return -0.5;
-        }
-        if(x < -l9)
-            return -0.25;
-        
-        return 1.0;
+        var p = MathNet.Numerics.Distributions.Normal.CDF(0, 1, x);
+        return p;
+            
+    }
+    public static double ToPortfolioMultiplicationSignal(double s, double threshold, double multiplier)
+    {
+        return s;
     }
     public IDictionary<DateTime,Series<string,double>> Run(IEnumerable<(int shortWindow, int longWindow, double weight)> filters, int nWindow)
     {
-        
-        
         var fs = 1.0;
-        var order = 3;
-        var fsignal = (Series<DateTime, double> data, double low, double hi) =>
-        {
-            var r = LowPassFilter.Filter(data, 1.0/low, fs, order) -
-                    LowPassFilter.Filter(data, 1.0/hi, fs, order);
+        var order = 11;
 
+        Series<DateTime, double> Fsignal(Series<DateTime, double> data, double shortwindow, double longwindow)
+        {
+            var r = LowPassFilter.Filter(data, 1.0 / shortwindow, fs, order) 
+                    - LowPassFilter.Filter(data, 1.0 / longwindow, fs, order);
             return r;
-        };
-            
-        
+        }
+
         var alldates = portfolioSeries.RowKeys.ToList();
         var filtersArray = filters as (int shortWindow, int longWindow, double weight)[] ?? filters.ToArray();
         
@@ -61,7 +51,7 @@ public class SignalCalculator(Frame<DateTime, string> portfolioSeries)
             {
                 var signal = subframe[columnName];
                 var psignal = filtersArray
-                    .Select(x => x.weight * fsignal(signal, x.shortWindow, x.longWindow))
+                    .Select(x => x.weight * Fsignal(signal, x.shortWindow, x.longWindow))
                     .Aggregate((x, y) => x + y);
 
                 var std = psignal.StdDev();
@@ -74,7 +64,7 @@ public class SignalCalculator(Frame<DateTime, string> portfolioSeries)
             x => 
                 new Series<string,double>(x.Select(y =>
                     {
-                        var s = new KeyValuePair<string, double>(y.columnName, quantifyScaling(y.Item3));
+                        var s = new KeyValuePair<string, double>(y.columnName, QuantifyScaling(y.Item3));
                         return s;
                     }
                    )));

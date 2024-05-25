@@ -69,8 +69,11 @@ namespace qmlib.optimizers.GA
                 {
                     break;
                 }
+                var xxsol = (pop.BestChromosome as DoubleArrayChromosome)?.Value?? Array.Empty<double>();
+                Console.WriteLine(String.Join(",",xxsol)+"->"+pop.BestChromosome.Fitness.ToString("F4"));
             }
             var sol = (pop.BestChromosome as DoubleArrayChromosome)?.Value?? Array.Empty<double>();
+            Console.WriteLine(String.Join(",",sol)+"->"+pop.BestChromosome.Fitness.ToString("F4"));
             return Scale(sol);
         }
 

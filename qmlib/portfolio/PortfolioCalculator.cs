@@ -83,10 +83,12 @@ public class PortfolioCalculator(string riskMeasureName)
             var b = Vector<double>.Build.DenseOfArray( Enumerable.Range(0, n).Select(_ => 1.0/ n).ToArray());
             var xsol = rm.OptimizeWeigts(Vector<double>.Build.DenseOfArray(w0), c, b);
             
-            
             if(weightModulationSignal is not null && weightModulationSignal.TryGetValue(date, out var signal))
             {
-                var xsignal = Vector<double>.Build.DenseOfArray(portfolioSeries.ColumnKeys.Select(c => signal[c]).ToArray());
+                var xsignal = Vector<double>
+                    .Build
+                    .DenseOfArray(portfolioSeries.ColumnKeys
+                        .Select(c => SignalCalculator.ToPortfolioMultiplicationSignal(signal[c],0.5,0.25)).ToArray());
                 xsol  = xsol.PointwiseMultiply(xsignal);
             }
             var rc = rm.RiskContributions(xsol);
@@ -101,7 +103,7 @@ public class PortfolioCalculator(string riskMeasureName)
             var pnl = (ret * xxsol).Sum();
             results.Add(new PortfolioOptimizationResult(datepnl,xxsol,xrc,pnl));
         }
-
+        
         return results.ToArray();
     }
 }
